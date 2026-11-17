@@ -36,7 +36,8 @@ def stage_prepare(a):
            "sizes": {k: len(v) for k, v in sp.items()}, "nm_docs": len(nm),
            "train_label_dist": label_stats(sp["train"])[0], "seed": a.seed}
     json.dump(man, open(S / "manifest.json", "w", encoding="utf-8"), indent=1, ensure_ascii=False)
-    print("[prepare]", json.dumps(man["sizes"]), "skeleton overlap:", stats["skeleton_overlap_with_train"])
+    print("[prepare]", json.dumps(man["sizes"]), "nm_kvkk_test_hard:", man["nm_docs"],
+          "skeleton overlap:", stats["skeleton_overlap_with_train"])
     print("[prepare] train label dist:", man["train_label_dist"])
 
 
@@ -275,8 +276,11 @@ def stage_eval(a):
 
 
 def write_markdown(results, taus, sel, plot_files=None):
-    L = ["# Results (char-level, document bootstrap 95% CI on overlap-F2)\n",
-         f"tau (calibrated on public val): {taus}\n", f"variant-selection score (val + synthetic val): {sel}\n"]
+    nm_docs = results.get("regex_only", {}).get("nm_kvkk", {}).get("full", {}).get("n_docs")
+    L = ["# Results (document bootstrap 95% CI on overlap-F2)\n",
+         "The YTU baseline uses a fixed 0.5 threshold and neural spans only; project variants use validation-calibrated thresholds and are also shown with a rule layer. These are not equal-postprocessing comparisons.\n",
+         f"NewMind nm_kvkk uses spans/test_hard.jsonl ({nm_docs} documents), not the full test split. Scores cover only mapped labels and ignore unmapped gold regions.\n",
+         f"tau (project variants calibrated on public val): {taus}\n", f"variant-selection score (val + synthetic val): {sel}\n"]
     if plot_files:
         L.append("\n## Evaluation & Training Charts (`work/reports/plots/`)\n")
         for pf in plot_files:
@@ -284,10 +288,10 @@ def write_markdown(results, taus, sel, plot_files=None):
             L.append(f"- `plots/{fn}`")
         L.append("")
     tests = sorted({t for r in results.values() for t in r})
-    for view, title in (("cmp", "Comparable taxonomy (labels the pretrained YTU model supports)"), ("full", "Full taxonomy")):
+    for view, title in (("cmp", "Shared mapped labels (different post-processing)"), ("full", "Mapped project taxonomy")):
         L.append(f"\n## {title}\n")
         for tn in tests:
-            L.append(f"\n### {tn}\n\n| model | ov-F2 [95% CI] | ov-recall | ov-precision | exact-F1 | char-leak | missed-span | false-redaction |\n|---|---|---|---|---|---|---|---|")
+            L.append(f"\n### {tn}\n\n| model | ov-F2 [95% CI] | ov-recall | ov-precision | exact-F1 | uncovered-gold-char | missed-span | false-redaction |\n|---|---|---|---|---|---|---|---|")
             for mk, r in results.items():
                 m = r.get(tn, {}).get(view)
                 if not m:
