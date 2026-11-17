@@ -1,0 +1,386 @@
+===== prepare =====
+[prepare] {"train": 67903, "val": 3052, "btx24_test": 10393, "belgin_test": 200, "yusuf_test": 405, "fevzi_test": 62} skeleton overlap: {'btx24_test': 0.7335, 'belgin_test': 0.0, 'yusuf_test': 0.0, 'fevzi_test': 0.0}
+[prepare] train label dist: {'PERSON': 9008, 'SECRET': 8542, 'EMAIL': 8464, 'PHONE': 8380, 'VKN': 7392, 'DATE': 7076, 'TCKN': 7072, 'ACCOUNT_NUMBER': 6245, 'IBAN': 5736, 'ADDRESS': 2882, 'URL': 755, 'PLATE': 17}
+===== prepare done in 5s =====
+
+===== synth =====
+[synth] local: {'train': 5118, 'val': 338, 'test': 881}
+[synth] seeded from bundled gemini_raw.jsonl: /kaggle/input/models/mohsenh2025/model5-pro/other/default/1/model5_PIL_pro/gemini_raw.jsonl
+[gemini] models=['gemini-3.5-flash-lite', 'gemini-3.1-flash-lite', 'gemini-3.1-flash-lite-preview', 'gemini-flash-lite-latest', 'gemini-3-flash-preview', 'gemini-3.5-flash', 'gemini-3.6-flash'] workers=8 resume=57 samples, 114 calls to run
+[gemini] call 6 context_dependent [gemini-3.5-flash-lite ok]: total ok=10 rej=0 dup=0 skip=0
+[gemini] call 12 hard_negatives [gemini-flash-lite-latest ok]: total ok=20 rej=0 dup=0 skip=0
+[gemini] call 8 address_variants [gemini-3.1-flash-lite ok]: total ok=30 rej=0 dup=0 skip=0
+[gemini] call 7 secrets [gemini-3.5-flash-lite ok]: total ok=40 rej=0 dup=0 skip=0
+[gemini] call 13 dense_multi_entity [gemini-flash-lite-latest ok]: total ok=50 rej=0 dup=0 skip=0
+[gemini] call 10 format_variants [gemini-3.1-flash-lite-preview ok]: total ok=60 rej=0 dup=0 skip=0
+[gemini] call 17 address_variants [gemini-3.5-flash-lite ok]: total ok=70 rej=0 dup=0 skip=0
+[gemini] call 9 suffix_boundary [gemini-3.1-flash-lite ok]: total ok=79 rej=1 dup=0 skip=0
+[gemini] call 11 ocr_asr_noise [gemini-3.1-flash-lite-preview ok]: total ok=88 rej=2 dup=0 skip=0
+[gemini] call 18 suffix_boundary [gemini-3.5-flash-lite ok]: total ok=97 rej=3 dup=0 skip=0
+[gemini] call 19 format_variants [gemini-3.5-flash-lite ok]: total ok=106 rej=4 dup=0 skip=0
+[gemini] call 22 dense_multi_entity [gemini-3.1-flash-lite-preview ok]: total ok=116 rej=4 dup=0 skip=0
+[gemini] call 14 colloquial_codeswitch [gemini-3-flash-preview ok]: total ok=126 rej=4 dup=0 skip=0
+[gemini] call 24 context_dependent [gemini-flash-lite-latest ok]: total ok=136 rej=4 dup=0 skip=0
+[gemini] call 20 ocr_asr_noise [gemini-3.1-flash-lite ok]: total ok=145 rej=5 dup=0 skip=0
+[gemini] call 15 context_dependent [gemini-3.5-flash ok]: total ok=155 rej=5 dup=0 skip=0
+[gemini] call 16 secrets [gemini-3.1-flash-lite-preview fallback_from:gemini-3.6-flash(503)]: total ok=165 rej=5 dup=0 skip=0
+[gemini] call 21 hard_negatives [gemini-3.1-flash-lite ok]: total ok=175 rej=5 dup=0 skip=0
+[gemini] call 23 colloquial_codeswitch [gemini-3.1-flash-lite-preview ok]: total ok=185 rej=5 dup=0 skip=0
+[gemini] call 25 secrets [gemini-flash-lite-latest ok]: total ok=195 rej=5 dup=0 skip=0
+[gemini] call 29 ocr_asr_noise [gemini-3.5-flash-lite ok]: total ok=205 rej=5 dup=0 skip=0
+[gemini] call 26 address_variants [gemini-flash-lite-latest ok]: total ok=215 rej=5 dup=0 skip=0
+[gemini] call 30 hard_negatives [gemini-3.5-flash-lite ok]: total ok=225 rej=5 dup=0 skip=0
+[gemini] call 34 secrets [gemini-flash-lite-latest fallback_from:gemini-3.1-flash-lite-preview(503)]: total ok=235 rej=5 dup=0 skip=0
+[gemini] call 32 colloquial_codeswitch [gemini-3.1-flash-lite ok]: total ok=245 rej=5 dup=0 skip=0
+[gemini] call 33 context_dependent [gemini-3.1-flash-lite-preview->gemini-3-flash-preview skipped(gemini-3.1-flash-lite-preview:503,gemini-3-flash-preview:503)]: total ok=245 rej=5 dup=0 skip=1
+[gemini] call 36 suffix_boundary [gemini-flash-lite-latest ok]: total ok=255 rej=5 dup=0 skip=1
+[gemini] call 31 dense_multi_entity [gemini-3.1-flash-lite ok]: total ok=265 rej=5 dup=0 skip=1
+[gemini] call 28 format_variants [gemini-3.5-flash ok]: total ok=274 rej=6 dup=0 skip=1
+[gemini] call 37 format_variants [gemini-flash-lite-latest ok]: total ok=283 rej=7 dup=0 skip=1
+[gemini] call 35 address_variants [gemini-3.1-flash-lite-preview ok]: total ok=293 rej=7 dup=0 skip=1
+[gemini] call 41 colloquial_codeswitch [gemini-3.5-flash-lite ok]: total ok=303 rej=7 dup=0 skip=1
+[gemini] call 40 dense_multi_entity [gemini-3.5-flash-lite ok]: total ok=313 rej=7 dup=0 skip=1
+[gemini] call 42 context_dependent [gemini-flash-lite-latest fallback_from:gemini-3.5-flash-lite(429)]: total ok=323 rej=7 dup=0 skip=1
+[gemini] call 47 ocr_asr_noise [gemini-3.6-flash->gemini-3.1-flash-lite skipped(gemini-3.6-flash:429,gemini-3.1-flash-lite:429)]: total ok=323 rej=7 dup=0 skip=2
+[gemini] call 27 suffix_boundary [gemini-3-flash-preview->gemini-3.1-flash-lite skipped(gemini-3-flash-preview:0,gemini-3.1-flash-lite:429)]: total ok=323 rej=7 dup=0 skip=3
+[gemini] call 45 suffix_boundary [gemini-flash-lite-latest ok]: total ok=332 rej=8 dup=0 skip=3
+[gemini] call 43 secrets [gemini-3.1-flash-lite ok]: total ok=342 rej=8 dup=0 skip=3
+[gemini] call 44 address_variants [gemini-3.1-flash-lite ok]: total ok=351 rej=9 dup=0 skip=3
+[gemini] call 49 dense_multi_entity [gemini-flash-lite-latest->gemini-3.5-flash-lite skipped(gemini-flash-lite-latest:429,gemini-3.5-flash-lite:429)]: total ok=351 rej=9 dup=0 skip=4
+[gemini] call 38 ocr_asr_noise [gemini-3.5-flash->gemini-3.5-flash-lite skipped(gemini-3.5-flash:503,gemini-3.5-flash-lite:429)]: total ok=351 rej=9 dup=0 skip=5
+[gemini] call 46 format_variants [gemini-3.1-flash-lite-preview fallback_from:gemini-3.5-flash(503)]: total ok=360 rej=10 dup=0 skip=5
+[gemini] call 39 hard_negatives [gemini-3.5-flash-lite fallback_from:gemini-3.6-flash(503)]: total ok=370 rej=10 dup=0 skip=5
+[gemini] call 53 address_variants [gemini-3.1-flash-lite->gemini-3.1-flash-lite-preview skipped(gemini-3.1-flash-lite:429,gemini-3.1-flash-lite-preview:429)]: total ok=370 rej=10 dup=0 skip=6
+[gemini] call 54 suffix_boundary [gemini-3.1-flash-lite->gemini-flash-lite-latest skipped(gemini-3.1-flash-lite:429,gemini-flash-lite-latest:429)]: total ok=370 rej=10 dup=0 skip=7
+[gemini] call 55 format_variants [gemini-3.1-flash-lite->gemini-flash-lite-latest skipped(gemini-3.1-flash-lite:429,gemini-flash-lite-latest:429)]: total ok=370 rej=10 dup=0 skip=8
+[gemini] call 51 context_dependent [gemini-3.1-flash-lite fallback_from:gemini-3.5-flash-lite(429)]: total ok=380 rej=10 dup=0 skip=8
+[gemini] call 56 ocr_asr_noise [gemini-3.1-flash-lite-preview ok]: total ok=389 rej=11 dup=0 skip=8
+[gemini] call 57 hard_negatives [gemini-flash-lite-latest ok]: total ok=399 rej=11 dup=0 skip=8
+[gemini] call 52 secrets [gemini-3-flash-preview fallback_from:gemini-3.5-flash-lite(429)]: total ok=407 rej=13 dup=0 skip=8
+[gemini] call 60 context_dependent [gemini-3.5-flash-lite ok]: total ok=417 rej=13 dup=0 skip=8
+[gemini] call 48 hard_negatives [gemini-flash-lite-latest->gemini-3-flash-preview skipped(gemini-flash-lite-latest:429,gemini-3-flash-preview:200)]: total ok=417 rej=13 dup=0 skip=9
+[gemini] call 50 colloquial_codeswitch [gemini-3-flash-preview fallback_from:gemini-3.1-flash-lite-preview(429)]: total ok=427 rej=13 dup=0 skip=9
+[gemini] call 59 colloquial_codeswitch [gemini-3.6-flash->gemini-3.5-flash skipped(gemini-3.6-flash:503,gemini-3.5-flash:503)]: total ok=427 rej=13 dup=0 skip=10
+[gemini] call 64 format_variants [gemini-3.5-flash-lite ok]: total ok=436 rej=14 dup=0 skip=10
+[gemini] call 66 hard_negatives [gemini-3.1-flash-lite ok]: total ok=446 rej=14 dup=0 skip=10
+[gemini] call 65 ocr_asr_noise [gemini-3.5-flash-lite ok]: total ok=456 rej=14 dup=0 skip=10
+[gemini] call 62 address_variants [gemini-3.1-flash-lite ok]: total ok=465 rej=15 dup=0 skip=10
+[gemini] call 70 secrets [gemini-flash-lite-latest ok]: total ok=475 rej=15 dup=0 skip=10
+[gemini] call 61 secrets [gemini-3-flash-preview ok]: total ok=485 rej=15 dup=0 skip=10
+[gemini] call 58 dense_multi_entity [gemini-3-flash-preview ok]: total ok=495 rej=15 dup=0 skip=10
+[gemini] call 71 address_variants [gemini-flash-lite-latest ok]: total ok=505 rej=15 dup=0 skip=10
+[gemini] call 67 dense_multi_entity [gemini-3.1-flash-lite-preview ok]: total ok=515 rej=15 dup=0 skip=10
+[gemini] call 74 ocr_asr_noise [gemini-3.5-flash-lite ok]: total ok=525 rej=15 dup=0 skip=10
+[gemini] call 68 colloquial_codeswitch [gemini-3.1-flash-lite-preview ok]: total ok=535 rej=15 dup=0 skip=10
+[gemini] call 72 suffix_boundary [gemini-flash-lite-latest ok]: total ok=544 rej=16 dup=0 skip=10
+[gemini] call 75 hard_negatives [gemini-3.5-flash-lite ok]: total ok=554 rej=16 dup=0 skip=10
+[gemini] call 79 secrets [gemini-flash-lite-latest ok]: total ok=564 rej=16 dup=0 skip=10
+[gemini] call 69 context_dependent [gemini-3-flash-preview fallback_from:gemini-3.1-flash-lite-preview(503)]: total ok=574 rej=16 dup=0 skip=10
+[gemini] call 78 context_dependent [gemini-3.1-flash-lite ok]: total ok=584 rej=16 dup=0 skip=10
+[gemini] call 80 address_variants [gemini-flash-lite-latest ok]: total ok=594 rej=16 dup=0 skip=10
+[gemini] call 76 dense_multi_entity [gemini-3.5-flash-lite ok]: total ok=604 rej=16 dup=0 skip=10
+[gemini] call 77 colloquial_codeswitch [gemini-3.1-flash-lite ok]: total ok=613 rej=17 dup=0 skip=10
+[gemini] call 81 suffix_boundary [gemini-flash-lite-latest ok]: total ok=623 rej=17 dup=0 skip=10
+[gemini] call 84 hard_negatives [gemini-3.5-flash-lite fallback_from:gemini-3.6-flash(503)]: total ok=633 rej=17 dup=0 skip=10
+[gemini] call 63 suffix_boundary [gemini-3.5-flash->gemini-3.1-flash-lite skipped(gemini-3.5-flash:503,gemini-3.1-flash-lite:0)]: total ok=633 rej=17 dup=0 skip=11
+[gemini] call 86 colloquial_codeswitch [gemini-3.1-flash-lite ok]: total ok=643 rej=17 dup=0 skip=11
+[gemini] call 73 format_variants [gemini-3.6-flash ok]: total ok=652 rej=18 dup=0 skip=11
+[gemini] call 89 address_variants [gemini-3.1-flash-lite-preview->gemini-flash-lite-latest skipped(gemini-3.1-flash-lite-preview:503,gemini-flash-lite-latest:429)]: total ok=652 rej=18 dup=0 skip=12
+[gemini] call 87 context_dependent [gemini-3.1-flash-lite ok]: total ok=662 rej=18 dup=0 skip=12
+[gemini] call 85 dense_multi_entity [gemini-3.5-flash-lite ok]: total ok=672 rej=18 dup=0 skip=12
+[gemini] call 90 suffix_boundary [gemini-3.1-flash-lite-preview ok]: total ok=682 rej=18 dup=0 skip=12
+[gemini] call 88 secrets [gemini-3.1-flash-lite-preview ok]: total ok=692 rej=18 dup=0 skip=12
+[gemini] call 82 format_variants [gemini-3-flash-preview ok]: total ok=701 rej=19 dup=0 skip=12
+[gemini] call 91 format_variants [gemini-flash-lite-latest->gemini-3.6-flash skipped(gemini-flash-lite-latest:503,gemini-3.6-flash:429)]: total ok=701 rej=19 dup=0 skip=13
+[gemini] call 97 secrets [gemini-3.1-flash-lite ok]: total ok=711 rej=19 dup=0 skip=13
+[gemini] call 94 dense_multi_entity [gemini-3.5-flash-lite ok]: total ok=721 rej=19 dup=0 skip=13
+[gemini] call 96 context_dependent [gemini-3.5-flash-lite->gemini-3.1-flash-lite skipped(gemini-3.5-flash-lite:429,gemini-3.1-flash-lite:429)]: total ok=721 rej=19 dup=0 skip=14
+[gemini] call 92 ocr_asr_noise [gemini-3-flash-preview ok]: total ok=731 rej=19 dup=0 skip=14
+[gemini] call 99 suffix_boundary [gemini-3-flash-preview->gemini-3.1-flash-lite-preview skipped(gemini-3-flash-preview:503,gemini-3.1-flash-lite-preview:429)]: total ok=731 rej=19 dup=0 skip=15
+[gemini] call 101 ocr_asr_noise [gemini-3.1-flash-lite-preview->gemini-3.5-flash-lite skipped(gemini-3.1-flash-lite-preview:429,gemini-3.5-flash-lite:429)]: total ok=731 rej=19 dup=0 skip=16
+[gemini] call 95 colloquial_codeswitch [gemini-3.1-flash-lite fallback_from:gemini-3.5-flash-lite(429)]: total ok=741 rej=19 dup=0 skip=16
+[gemini] call 98 address_variants [gemini-3.1-flash-lite ok]: total ok=751 rej=19 dup=0 skip=16
+[gemini] call 83 ocr_asr_noise [gemini-3.1-flash-lite-preview fallback_from:gemini-3.5-flash(200)]: total ok=760 rej=20 dup=0 skip=16
+[gemini] call 100 format_variants [gemini-3.1-flash-lite-preview ok]: total ok=769 rej=21 dup=0 skip=16
+[gemini] call 105 context_dependent [gemini-flash-lite-latest ok]: total ok=779 rej=21 dup=0 skip=16
+[gemini] call 103 dense_multi_entity [gemini-3.5-flash-lite ok]: total ok=789 rej=21 dup=0 skip=16
+[gemini] call 104 colloquial_codeswitch [gemini-flash-lite-latest fallback_from:gemini-3.5-flash(503)]: total ok=799 rej=21 dup=0 skip=16
+[gemini] call 93 hard_negatives [gemini-3.5-flash->gemini-3-flash-preview skipped(gemini-3.5-flash:503,gemini-3-flash-preview:200)]: total ok=799 rej=21 dup=0 skip=17
+[gemini] call 107 address_variants [gemini-flash-lite-latest ok]: total ok=809 rej=21 dup=0 skip=17
+[gemini] call 102 hard_negatives [gemini-3.6-flash ok]: total ok=819 rej=21 dup=0 skip=17
+[gemini] call 108 suffix_boundary [gemini-3.1-flash-lite ok]: total ok=829 rej=21 dup=0 skip=17
+[gemini] call 110 ocr_asr_noise [gemini-3.5-flash-lite ok]: total ok=839 rej=21 dup=0 skip=17
+[gemini] call 114 context_dependent [gemini-flash-lite-latest ok]: total ok=849 rej=21 dup=0 skip=17
+[gemini] call 106 secrets [gemini-3.1-flash-lite-preview fallback_from:gemini-3.6-flash(429)]: total ok=859 rej=21 dup=0 skip=17
+[gemini] call 115 secrets [gemini-flash-lite-latest ok]: total ok=869 rej=21 dup=0 skip=17
+[gemini] call 117 suffix_boundary [gemini-3.5-flash-lite ok]: total ok=879 rej=21 dup=0 skip=17
+[gemini] call 109 format_variants [gemini-3.1-flash-lite ok]: total ok=888 rej=22 dup=0 skip=17
+[gemini] call 111 hard_negatives [gemini-3.1-flash-lite ok]: total ok=898 rej=22 dup=0 skip=17
+[gemini] call 118 format_variants [gemini-3.5-flash-lite ok]: total ok=907 rej=23 dup=0 skip=17
+[gemini] call 112 dense_multi_entity [gemini-3.1-flash-lite-preview ok]: total ok=917 rej=23 dup=0 skip=17
+[gemini] call 113 colloquial_codeswitch [gemini-3.1-flash-lite-preview ok]: total ok=926 rej=24 dup=0 skip=17
+[gemini] call 119 ocr_asr_noise [gemini-3.5-flash-lite ok]: total ok=936 rej=24 dup=0 skip=17
+[gemini] call 116 address_variants [gemini-3-flash-preview ok]: total ok=944 rej=26 dup=0 skip=17
+[synth] gemini stats: {'ok': 944, 'rejected': 26, 'dup': 0, 'skipped_calls': 17}
+[synth] gemini: {'train': 744, 'val': 104, 'test': 153}
+===== synth done in 156s =====
+
+===== train =====
+[train] variant clean: 67903 public + 0 synthetic
+[train] clean already trained, skipping (use --retrain)
+[train] variant full: 67903 public + 5862 synthetic
+[train] full already trained, skipping (use --retrain)
+[train] 0 jobs, 2 GPU(s)
+===== train done in 3s =====
+
+===== eval =====
+[eval] ytu_baseline
+WARNING: All log messages before absl::InitializeLog() is called are written to STDERR
+I0000 00:00:1794433059.899817     782 cudart_stub.cc:31] Could not find cuda drivers on your machine, GPU will not be used.
+[eval] clean
+[eval] full
+[plots] saved 5 charts to /kaggle/working/work/reports/plots
+# Results (char-level, document bootstrap 95% CI on overlap-F2)
+
+tau (calibrated on public val): {'ytu_baseline': 0.5, 'clean': 0.15, 'full': 0.6}
+
+variant-selection score (val + synthetic val): {'clean': np.float64(0.8741216729726043), 'full': np.float64(0.9282021186319751)}
+
+
+## Evaluation & Training Charts (`work/reports/plots/`)
+
+- `plots/01_benchmark_ov_f2.png`
+- `plots/02_exact_f1_comparison.png`
+- `plots/03_privacy_risk_leak_vs_false_redaction.png`
+- `plots/04_per_class_heatmap.png`
+- `plots/05_training_and_calibration.png`
+
+
+## Comparable taxonomy (labels the pretrained YTU model supports)
+
+
+### belgin_test
+
+| model | ov-F2 [95% CI] | ov-recall | ov-precision | exact-F1 | char-leak | missed-span | false-redaction |
+|---|---|---|---|---|---|---|---|
+| regex_only | 0.287 [0.226, 0.342] | 0.243 | 1.000 | 0.392 | 0.6871 | 0.7566 | - |
+| ytu_baseline | 0.711 [0.664, 0.762] | 0.730 | 0.643 | 0.213 | 0.4837 | 0.2664 | - |
+| clean | 1.000 [1.000, 1.000] | 1.000 | 1.000 | 0.993 | 0.0024 | 0.0000 | - |
+| clean+hybrid | 1.000 [1.000, 1.000] | 1.000 | 1.000 | 0.993 | 0.0024 | 0.0000 | - |
+| full | 0.970 [0.954, 0.983] | 0.997 | 0.876 | 0.865 | 0.0068 | 0.0000 | - |
+| full+hybrid | 0.986 [0.976, 0.995] | 1.000 | 0.935 | 0.938 | 0.0048 | 0.0000 | - |
+
+### btx24_test
+
+| model | ov-F2 [95% CI] | ov-recall | ov-precision | exact-F1 | char-leak | missed-span | false-redaction |
+|---|---|---|---|---|---|---|---|
+| regex_only | 0.270 [0.260, 0.279] | 0.229 | 0.944 | 0.342 | 0.7802 | 0.7577 | 0.000 |
+| ytu_baseline | 0.557 [0.549, 0.565] | 0.586 | 0.465 | 0.132 | 0.3896 | 0.3385 | 0.001 |
+| clean | 1.000 [0.999, 1.000] | 1.000 | 0.999 | 0.999 | 0.0000 | 0.0000 | 0.000 |
+| clean+hybrid | 0.986 [0.984, 0.989] | 0.987 | 0.986 | 0.969 | 0.0033 | 0.0000 | 0.000 |
+| full | 1.000 [1.000, 1.000] | 1.000 | 1.000 | 1.000 | 0.0000 | 0.0000 | 0.000 |
+| full+hybrid | 0.986 [0.984, 0.989] | 0.987 | 0.986 | 0.970 | 0.0033 | 0.0000 | 0.000 |
+
+### edge_gemini(synthetic)
+
+| model | ov-F2 [95% CI] | ov-recall | ov-precision | exact-F1 | char-leak | missed-span | false-redaction |
+|---|---|---|---|---|---|---|---|
+| regex_only | 0.230 [0.186, 0.269] | 0.193 | 0.932 | 0.316 | 0.8029 | 0.8039 | 0.033 |
+| ytu_baseline | 0.710 [0.678, 0.741] | 0.796 | 0.496 | 0.348 | 0.2042 | 0.1653 | 0.567 |
+| clean | 0.753 [0.705, 0.799] | 0.807 | 0.595 | 0.611 | 0.0033 | 0.0000 | 0.767 |
+| clean+hybrid | 0.765 [0.716, 0.809] | 0.818 | 0.608 | 0.631 | 0.0071 | 0.0028 | 0.767 |
+| full | 0.865 [0.832, 0.898] | 0.896 | 0.758 | 0.780 | 0.0116 | 0.0056 | 0.433 |
+| full+hybrid | 0.870 [0.837, 0.906] | 0.902 | 0.763 | 0.786 | 0.0139 | 0.0084 | 0.433 |
+
+### edge_local(synthetic)
+
+| model | ov-F2 [95% CI] | ov-recall | ov-precision | exact-F1 | char-leak | missed-span | false-redaction |
+|---|---|---|---|---|---|---|---|
+| regex_only | 0.469 [0.454, 0.485] | 0.414 | 1.000 | 0.574 | 0.4946 | 0.5859 | 0.000 |
+| ytu_baseline | 0.793 [0.781, 0.805] | 0.887 | 0.557 | 0.436 | 0.1577 | 0.0725 | 0.000 |
+| clean | 0.686 [0.669, 0.700] | 0.784 | 0.457 | 0.559 | 0.0006 | 0.0000 | 0.721 |
+| clean+hybrid | 0.868 [0.856, 0.878] | 0.992 | 0.579 | 0.708 | 0.0017 | 0.0000 | 0.721 |
+| full | 0.882 [0.869, 0.894] | 0.942 | 0.703 | 0.702 | 0.0047 | 0.0000 | 0.010 |
+| full+hybrid | 0.990 [0.988, 0.992] | 1.000 | 0.954 | 0.967 | 0.0011 | 0.0000 | 0.010 |
+
+### fevzi_test
+
+| model | ov-F2 [95% CI] | ov-recall | ov-precision | exact-F1 | char-leak | missed-span | false-redaction |
+|---|---|---|---|---|---|---|---|
+| regex_only | 0.959 [0.904, 1.000] | 0.949 | 1.000 | 0.974 | 0.0263 | 0.0508 | 0.000 |
+| ytu_baseline | 0.708 [0.621, 0.782] | 0.763 | 0.549 | 0.128 | 0.3642 | 0.2034 | 0.000 |
+| clean | 0.611 [0.494, 0.722] | 0.661 | 0.470 | 0.535 | 0.0049 | 0.0000 | 1.000 |
+| clean+hybrid | 0.919 [0.863, 0.968] | 0.966 | 0.770 | 0.842 | 0.0010 | 0.0000 | 1.000 |
+| full | 0.728 [0.622, 0.831] | 0.746 | 0.667 | 0.688 | 0.0000 | 0.0000 | 0.000 |
+| full+hybrid | 0.960 [0.926, 0.987] | 0.983 | 0.879 | 0.912 | 0.0000 | 0.0000 | 0.000 |
+
+### nm_kvkk
+
+| model | ov-F2 [95% CI] | ov-recall | ov-precision | exact-F1 | char-leak | missed-span | false-redaction |
+|---|---|---|---|---|---|---|---|
+| regex_only | 0.237 [0.207, 0.265] | 0.199 | 1.000 | 0.332 | 0.8057 | 0.8010 | - |
+| ytu_baseline | 0.922 [0.913, 0.930] | 0.995 | 0.712 | 0.534 | 0.0877 | 0.0052 | - |
+| clean | 0.749 [0.715, 0.781] | 0.944 | 0.410 | 0.513 | 0.0088 | 0.0104 | - |
+| clean+hybrid | 0.784 [0.752, 0.817] | 0.981 | 0.435 | 0.563 | 0.0088 | 0.0104 | - |
+| full | 0.906 [0.889, 0.922] | 0.973 | 0.711 | 0.807 | 0.0046 | 0.0070 | - |
+| full+hybrid | 0.924 [0.908, 0.939] | 0.990 | 0.728 | 0.828 | 0.0044 | 0.0070 | - |
+
+### yusuf_test
+
+| model | ov-F2 [95% CI] | ov-recall | ov-precision | exact-F1 | char-leak | missed-span | false-redaction |
+|---|---|---|---|---|---|---|---|
+| regex_only | 0.187 [0.161, 0.216] | 0.155 | 0.981 | 0.268 | 0.7911 | 0.8416 | 0.000 |
+| ytu_baseline | 0.548 [0.521, 0.573] | 0.578 | 0.454 | 0.213 | 0.3837 | 0.3372 | 0.177 |
+| clean | 1.000 [1.000, 1.000] | 1.000 | 1.000 | 0.960 | 0.0043 | 0.0000 | 0.000 |
+| clean+hybrid | 0.997 [0.993, 1.000] | 0.997 | 0.997 | 0.957 | 0.0047 | 0.0000 | 0.000 |
+| full | 1.000 [1.000, 1.000] | 1.000 | 1.000 | 0.960 | 0.0043 | 0.0000 | 0.000 |
+| full+hybrid | 0.997 [0.993, 1.000] | 0.997 | 0.997 | 0.957 | 0.0047 | 0.0000 | 0.000 |
+
+## Full taxonomy
+
+
+### belgin_test
+
+| model | ov-F2 [95% CI] | ov-recall | ov-precision | exact-F1 | char-leak | missed-span | false-redaction |
+|---|---|---|---|---|---|---|---|
+| regex_only | 0.287 [0.226, 0.342] | 0.243 | 1.000 | 0.392 | 0.6871 | 0.7566 | - |
+| ytu_baseline | 0.711 [0.664, 0.762] | 0.730 | 0.643 | 0.213 | 0.4837 | 0.2664 | - |
+| clean | 1.000 [1.000, 1.000] | 1.000 | 1.000 | 0.993 | 0.0024 | 0.0000 | - |
+| clean+hybrid | 1.000 [1.000, 1.000] | 1.000 | 1.000 | 0.993 | 0.0024 | 0.0000 | - |
+| full | 0.970 [0.954, 0.983] | 0.997 | 0.876 | 0.865 | 0.0068 | 0.0000 | - |
+| full+hybrid | 0.986 [0.976, 0.995] | 1.000 | 0.935 | 0.938 | 0.0048 | 0.0000 | - |
+
+### btx24_test
+
+| model | ov-F2 [95% CI] | ov-recall | ov-precision | exact-F1 | char-leak | missed-span | false-redaction |
+|---|---|---|---|---|---|---|---|
+| regex_only | 0.245 [0.236, 0.254] | 0.207 | 0.944 | 0.315 | 0.7963 | 0.7806 | - |
+| ytu_baseline | 0.516 [0.509, 0.524] | 0.530 | 0.465 | 0.126 | 0.4344 | 0.4010 | - |
+| clean | 1.000 [1.000, 1.000] | 1.000 | 0.999 | 0.999 | 0.0000 | 0.0000 | - |
+| clean+hybrid | 0.988 [0.986, 0.990] | 0.988 | 0.987 | 0.972 | 0.0031 | 0.0000 | - |
+| full | 1.000 [1.000, 1.000] | 1.000 | 1.000 | 1.000 | 0.0000 | 0.0000 | - |
+| full+hybrid | 0.988 [0.986, 0.990] | 0.988 | 0.988 | 0.973 | 0.0031 | 0.0000 | - |
+
+### edge_gemini(synthetic)
+
+| model | ov-F2 [95% CI] | ov-recall | ov-precision | exact-F1 | char-leak | missed-span | false-redaction |
+|---|---|---|---|---|---|---|---|
+| regex_only | 0.207 [0.169, 0.242] | 0.173 | 0.932 | 0.288 | 0.8265 | 0.8241 | 0.053 |
+| ytu_baseline | 0.656 [0.619, 0.694] | 0.714 | 0.496 | 0.334 | 0.2930 | 0.2186 | 0.684 |
+| clean | 0.743 [0.694, 0.787] | 0.791 | 0.598 | 0.608 | 0.0018 | 0.0000 | 0.947 |
+| clean+hybrid | 0.754 [0.706, 0.796] | 0.802 | 0.610 | 0.625 | 0.0052 | 0.0025 | 0.947 |
+| full | 0.870 [0.839, 0.903] | 0.899 | 0.770 | 0.779 | 0.0156 | 0.0075 | 0.684 |
+| full+hybrid | 0.875 [0.840, 0.908] | 0.905 | 0.774 | 0.783 | 0.0176 | 0.0101 | 0.684 |
+
+### edge_local(synthetic)
+
+| model | ov-F2 [95% CI] | ov-recall | ov-precision | exact-F1 | char-leak | missed-span | false-redaction |
+|---|---|---|---|---|---|---|---|
+| regex_only | 0.443 [0.426, 0.460] | 0.389 | 1.000 | 0.549 | 0.5071 | 0.6114 | 0.000 |
+| ytu_baseline | 0.757 [0.746, 0.771] | 0.832 | 0.557 | 0.425 | 0.1719 | 0.0979 | 0.000 |
+| clean | 0.686 [0.669, 0.701] | 0.778 | 0.465 | 0.536 | 0.0006 | 0.0000 | 0.721 |
+| clean+hybrid | 0.858 [0.845, 0.869] | 0.974 | 0.583 | 0.678 | 0.0017 | 0.0000 | 0.721 |
+| full | 0.889 [0.876, 0.900] | 0.945 | 0.717 | 0.717 | 0.0045 | 0.0000 | 0.015 |
+| full+hybrid | 0.991 [0.989, 0.993] | 1.000 | 0.956 | 0.968 | 0.0011 | 0.0000 | 0.015 |
+
+### fevzi_test
+
+| model | ov-F2 [95% CI] | ov-recall | ov-precision | exact-F1 | char-leak | missed-span | false-redaction |
+|---|---|---|---|---|---|---|---|
+| regex_only | 0.959 [0.904, 1.000] | 0.949 | 1.000 | 0.974 | 0.0263 | 0.0508 | 0.000 |
+| ytu_baseline | 0.708 [0.621, 0.782] | 0.763 | 0.549 | 0.128 | 0.3642 | 0.2034 | 0.000 |
+| clean | 0.611 [0.494, 0.722] | 0.661 | 0.470 | 0.535 | 0.0049 | 0.0000 | 1.000 |
+| clean+hybrid | 0.919 [0.863, 0.968] | 0.966 | 0.770 | 0.842 | 0.0010 | 0.0000 | 1.000 |
+| full | 0.728 [0.622, 0.831] | 0.746 | 0.667 | 0.688 | 0.0000 | 0.0000 | 0.000 |
+| full+hybrid | 0.960 [0.926, 0.987] | 0.983 | 0.879 | 0.912 | 0.0000 | 0.0000 | 0.000 |
+
+### nm_kvkk
+
+| model | ov-F2 [95% CI] | ov-recall | ov-precision | exact-F1 | char-leak | missed-span | false-redaction |
+|---|---|---|---|---|---|---|---|
+| regex_only | 0.235 [0.205, 0.263] | 0.198 | 1.000 | 0.330 | 0.8065 | 0.8024 | - |
+| ytu_baseline | 0.917 [0.909, 0.927] | 0.988 | 0.712 | 0.533 | 0.0911 | 0.0121 | - |
+| clean | 0.734 [0.700, 0.766] | 0.944 | 0.389 | 0.492 | 0.0088 | 0.0104 | - |
+| clean+hybrid | 0.768 [0.735, 0.800] | 0.980 | 0.412 | 0.540 | 0.0088 | 0.0104 | - |
+| full | 0.893 [0.874, 0.910] | 0.973 | 0.672 | 0.781 | 0.0046 | 0.0069 | - |
+| full+hybrid | 0.910 [0.894, 0.927] | 0.991 | 0.688 | 0.801 | 0.0044 | 0.0069 | - |
+
+### yusuf_test
+
+| model | ov-F2 [95% CI] | ov-recall | ov-precision | exact-F1 | char-leak | missed-span | false-redaction |
+|---|---|---|---|---|---|---|---|
+| regex_only | 0.170 [0.146, 0.195] | 0.141 | 0.981 | 0.246 | 0.8198 | 0.8568 | 0.000 |
+| ytu_baseline | 0.507 [0.478, 0.534] | 0.523 | 0.454 | 0.203 | 0.4638 | 0.3607 | 0.130 |
+| clean | 1.000 [1.000, 1.000] | 1.000 | 1.000 | 0.964 | 0.0037 | 0.0000 | 0.000 |
+| clean+hybrid | 0.997 [0.993, 1.000] | 0.997 | 0.997 | 0.962 | 0.0041 | 0.0000 | 0.000 |
+| full | 1.000 [1.000, 1.000] | 1.000 | 1.000 | 0.964 | 0.0037 | 0.0000 | 0.000 |
+| full+hybrid | 0.997 [0.993, 1.000] | 0.997 | 0.997 | 0.962 | 0.0041 | 0.0000 | 0.000 |
+===== eval done in 78s =====
+
+===== export =====
+[export] best variant by validation: full -> /kaggle/working/work/export/model
+# Demo (hybrid pipeline, CPU)
+
+**IN**  Merhaba, ben Elif Kaya. TC kimlik numaram 10000000146, IBAN'ım TR330006100519786457841326, cep 0532 111 22 33.
+
+**OUT** Merhaba, ben [PERSON_1]. TC kimlik numaram [TCKN_1], IBAN'ım [IBAN_1], cep [PHONE_1].
+
+```
+PERSON         'Elif Kaya'                             neural 1.00
+TCKN           '10000000146'                           regex  1.00
+IBAN           'TR330006100519786457841326'            regex  1.00
+PHONE          '0532 111 22 33'                        regex  0.90
+```
+
+**IN**  Kartım 4532 0151 1283 0366 ile ödeme yaptım, doğrulama kodu 482913 geldi ama olmadı, mail: elif.kaya@gmail.com'a da gelmedi.
+
+**OUT** Kartım [CARD_1] ile ödeme yaptım, doğrulama kodu [SECRET_1] geldi ama olmadı, mail: [EMAIL_1]'a da gelmedi.
+
+```
+CARD           '4532 0151 1283 0366'                   regex  0.98
+SECRET         '482913'                                neural 1.00
+EMAIL          'elif.kaya@gmail.com'                   regex  0.99
+```
+
+**IN**  Kargo Ahmet Yılmaz'a teslim edilecek, adres: Atatürk Mah. Gül Sok. No:12 D:4, Kadıköy/İstanbul.
+
+**OUT** Kargo [PERSON_1]'a teslim edilecek, adres: [ADDRESS_1].
+
+```
+PERSON         'Ahmet Yılmaz'                          neural 1.00
+ADDRESS        'Atatürk Mah. Gül Sok. No:12 D:4, Kadıköy/İstanbul'neural 1.00
+```
+
+**IN**  Kampanya 29 Ekim'e kadar geçerli, ürün kodu 48291736, fiyat 1.250,50 TL, detaylar https://www.turkiye.gov.tr adresinde.
+
+**OUT** Kampanya 29 Ekim'e kadar geçerli, ürün kodu 48291736, fiyat 1.250,50 TL, detaylar https://www.turkiye.gov.tr adresinde.
+
+```
+
+```
+
+**IN**  selam abi tc 100000001 46 yanlis yazilmis duzeltin ben mehmet demir 05551234567
+
+**OUT** selam abi tc [TCKN_1] yanlis yazilmis duzeltin ben [PERSON_1] [PHONE_1]
+
+```
+TCKN           '100000001 46'                          neural 0.99
+PERSON         'mehmet demir'                          neural 1.00
+PHONE          '05551234567'                           regex  0.90
+```
+
+**IN**  Plakası 34 ABC 123 olan araç Zeynep Öztürk'ün, doğum tarihi 14.03.1988.
+
+**OUT** Plakası [PLATE_1] olan araç [PERSON_1]'ün, doğum tarihi [DATE_1].
+
+```
+PLATE          '34 ABC 123'                            neural 1.00
+PERSON         'Zeynep Öztürk'                         neural 1.00
+DATE           '14.03.1988'                            neural 1.00
+```
+
+
+CPU latency (batch=1, 120 docs): p50=96.2 ms, p95=867.2 ms
+
+[export] zip: /kaggle/working/work/turkish_pii_model.zip
+===== export done in 55s =====

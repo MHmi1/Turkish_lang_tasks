@@ -1,0 +1,38 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="390" viewBox="0 0 1200 390" role="img" aria-labelledby="title desc">
+  <title id="title">Turkish aspect based sentiment pipeline</title>
+  <desc id="desc">Public Turkish reviews are audited, cleaned, and analyzed. A ModernBERT aspect extractor and review aspect polarity classifier feed explicit tuple evaluation, while a separate closed ontology probe tests implicit aspects.</desc>
+  <defs>
+    <linearGradient id="bg" x2="1" y2="1"><stop stop-color="#10203a"/><stop offset="1" stop-color="#20436a"/></linearGradient>
+    <style>
+      .head{fill:#f5faff;font:700 24px system-ui,sans-serif}.sub{fill:#b6cce0;font:14px system-ui,sans-serif}
+      .box{fill:#1d3c59;stroke:#7399b0;stroke-width:1.5}.name{fill:#ffffff;font:700 17px system-ui,sans-serif}
+      .detail{fill:#ccdeea;font:13px system-ui,sans-serif}.line{stroke:#7ccac7;stroke-width:3;fill:none;marker-end:url(#arrow)}
+    </style>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0 10 5 0 10Z" fill="#7ccac7"/></marker>
+  </defs>
+  <rect width="1200" height="390" rx="20" fill="url(#bg)"/>
+  <text x="42" y="49" class="head">Turkish aspect based sentiment analysis</text>
+  <text x="42" y="75" class="sub">Public data · offset-safe cleaning · two task-specific models · separated metrics</text>
+  <rect class="box" x="42" y="137" width="205" height="115" rx="14"/>
+  <text class="name" x="60" y="170">Public reviews</text>
+  <text class="detail" x="60" y="196">ABSA TR · M ABSA</text><text class="detail" x="60" y="217">Clothing categories</text>
+  <path class="line" d="M252 194 H278"/>
+  <rect class="box" x="284" y="137" width="205" height="115" rx="14"/>
+  <text class="name" x="302" y="170">Audit and EDA</text>
+  <text class="detail" x="302" y="196">Offsets · duplicates</text><text class="detail" x="302" y="217">Split overlap · length</text>
+  <path class="line" d="M494 194 H525"/>
+  <path class="line" d="M525 194 V125 H552"/>
+  <path class="line" d="M525 194 V266 H552"/>
+  <rect class="box" x="558" y="91" width="226" height="105" rx="14"/>
+  <text class="name" x="576" y="124">Aspect extraction</text>
+  <text class="detail" x="576" y="151">ModernBERT TR BIO tags</text><text class="detail" x="576" y="172">Exact and overlap F1</text>
+  <rect class="box" x="558" y="214" width="226" height="105" rx="14"/>
+  <text class="name" x="576" y="247">Aspect polarity</text>
+  <text class="detail" x="576" y="274">Review–aspect classifier</text><text class="detail" x="576" y="295">Macro F1 on gold aspects</text>
+  <path class="line" d="M789 143 H832 V188 H856"/>
+  <path class="line" d="M789 267 H832 V218 H856"/>
+  <rect class="box" x="862" y="137" width="286" height="115" rx="14"/>
+  <text class="name" x="880" y="170">Separated evaluation</text>
+  <text class="detail" x="880" y="196">End-to-end explicit tuple F1</text><text class="detail" x="880" y="217">Closed-ontology implicit probe</text>
+  <text class="sub" x="42" y="355">Model scores remain pending until the full GPU experiment is completed.</text>
+</svg>

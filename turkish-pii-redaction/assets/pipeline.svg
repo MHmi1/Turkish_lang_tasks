@@ -1,0 +1,36 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="290" viewBox="0 0 1200 290" role="img" aria-labelledby="title desc">
+  <title id="title">Turkish PII redaction pipeline</title>
+  <desc id="desc">Public and synthetic training data feed a ModernBERT span detector. Validation calibrates a threshold. Neural spans and checksum validated rules are merged, then sensitive text is redacted and evaluated.</desc>
+  <defs>
+    <linearGradient id="bg" x2="1" y2="1"><stop stop-color="#0b1930"/><stop offset="1" stop-color="#123d57"/></linearGradient>
+    <style>
+      .head{fill:#f4faff;font:700 24px system-ui,sans-serif}.sub{fill:#a8bfd1;font:14px system-ui,sans-serif}
+      .box{fill:#18334d;stroke:#4f8198;stroke-width:1.5}.name{fill:#ffffff;font:700 17px system-ui,sans-serif}
+      .detail{fill:#bed2df;font:13px system-ui,sans-serif}.line{stroke:#69c5c8;stroke-width:3;fill:none;marker-end:url(#arrow)}
+    </style>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0 10 5 0 10Z" fill="#69c5c8"/></marker>
+  </defs>
+  <rect width="1200" height="290" rx="20" fill="url(#bg)"/>
+  <text x="42" y="49" class="head">Turkish PII detection and redaction</text>
+  <text x="42" y="75" class="sub">From annotated spans to a validated, measured redaction decision</text>
+  <rect class="box" x="40" y="108" width="202" height="113" rx="14"/>
+  <text class="name" x="58" y="140">Data preparation</text>
+  <text class="detail" x="58" y="166">Public corpora + optional</text><text class="detail" x="58" y="186">synthetic edge cases</text>
+  <path class="line" d="M247 165 H272"/>
+  <rect class="box" x="278" y="108" width="202" height="113" rx="14"/>
+  <text class="name" x="296" y="140">ModernBERT TR</text>
+  <text class="detail" x="296" y="166">13-class BIO tagging</text><text class="detail" x="296" y="186">Validation calibration</text>
+  <path class="line" d="M485 165 H510"/>
+  <rect class="box" x="516" y="108" width="202" height="113" rx="14"/>
+  <text class="name" x="534" y="140">Rule validation</text>
+  <text class="detail" x="534" y="166">TCKN · VKN · IBAN</text><text class="detail" x="534" y="186">Card · phone · email</text>
+  <path class="line" d="M723 165 H748"/>
+  <rect class="box" x="754" y="108" width="202" height="113" rx="14"/>
+  <text class="name" x="772" y="140">Hybrid resolver</text>
+  <text class="detail" x="772" y="166">Merge spans and suffixes</text><text class="detail" x="772" y="186">Redact sensitive text</text>
+  <path class="line" d="M961 165 H986"/>
+  <rect class="box" x="992" y="108" width="168" height="113" rx="14"/>
+  <text class="name" x="1010" y="140">Evaluation</text>
+  <text class="detail" x="1010" y="166">F2 · exact F1</text><text class="detail" x="1010" y="186">Leak and false redact</text>
+  <text class="sub" x="42" y="258">Held-out source tests and the external KVKK hard set are reported separately.</text>
+</svg>
