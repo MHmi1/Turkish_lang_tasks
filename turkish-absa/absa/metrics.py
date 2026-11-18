@@ -51,14 +51,33 @@ def _bio_spans(seq):
     return spans
 
 
-def apc_trainer_metrics(eval_pred):
+def apc_trainer_metrics(eval_pred, metadata=None):
     logits, labels = eval_pred
     if isinstance(logits, tuple):
         logits = logits[0]
+    if metadata is not None:
+        if len(metadata) != len(labels):
+            raise ValueError("APC validation metadata does not match prediction rows")
+        grouped = {}
+        for row, label, info in zip(logits, labels, metadata):
+            key = info["pair_id"]
+            if key not in grouped:
+                grouped[key] = [np.zeros_like(row, dtype=np.float64), 0, label, info]
+            grouped[key][0] += row
+            grouped[key][1] += 1
+            if grouped[key][2] != label:
+                raise ValueError("Conflicting labels across APC windows")
+        logits = np.array([entry[0] / entry[1] for entry in grouped.values()])
+        labels = np.array([entry[2] for entry in grouped.values()])
+        metadata = [entry[3] for entry in grouped.values()]
     preds = np.argmax(logits, -1)
     acc = float(accuracy_score(labels, preds))
-    mf1 = float(f1_score(labels, preds, average="macro", zero_division=0))
-    return {"accuracy": acc, "macro_f1": mf1}
+    mf1 = float(f1_score(labels, preds, labels=[0, 1, 2, 3], average="macro", zero_division=0))
+    positive = [i for i, row in enumerate(metadata or []) if not row.get("negative_sample")]
+    gold_f1 = float(f1_score(labels[positive], preds[positive], labels=[0, 1, 2],
+                             average="macro", zero_division=0)) if positive else 0.0
+    return {"accuracy": acc, "macro_f1": mf1, "gold_macro_f1": gold_f1,
+            "gold_pairs": len(positive)}
 
 
 # --------------------------------------------------------- full benchmark eval

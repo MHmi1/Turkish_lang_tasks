@@ -79,6 +79,7 @@ def main():
     ap.add_argument("--patience", type=int, default=4)
     ap.add_argument("--max_train", type=int, default=0)
     ap.add_argument("--negative_per_doc", type=int, default=2)
+    ap.add_argument("--ontology", default="", help="Training-only domain ontology JSON from prepare/clean")
     ap.add_argument("--grad_accum", type=int, default=4)
     a = ap.parse_args()
     set_seed(a.seed)
@@ -111,18 +112,24 @@ def main():
         cw = torch.tensor([1.0, min(5.0, (o / max(c[1], 1)) ** 0.35), min(5.0, (o / max(c[2], 1)) ** 0.35)], dtype=torch.float32)
         smoothing = 0.0
     else:
+        if not a.ontology:
+            raise ValueError("APC training requires --ontology built from cleaned training data")
+        with open(a.ontology, encoding="utf-8") as source:
+            ontology = json.load(source)
         tr, _ = encode_apc(tok, tr_docs, a.max_len, train=True,
-                           negative_per_doc=a.negative_per_doc, seed=a.seed)
-        va, _ = encode_apc(tok, va_docs, a.max_len, add_negatives=True,
-                           negative_per_doc=1, seed=a.seed+1)
+                           negative_per_doc=a.negative_per_doc, seed=a.seed,
+                           ontology=ontology)
+        va, va_meta = encode_apc(tok, va_docs, a.max_len, add_negatives=True,
+                                 negative_per_doc=1, seed=a.seed+1, ontology=ontology,
+                                 view_policy="surface")
         cfg = _clean_cfg(AutoConfig.from_pretrained(a.model, revision=revision, num_labels=len(APC_L2I), id2label=APC_I2L, label2id=APC_L2I))
         try:
             model = AutoModelForSequenceClassification.from_pretrained(a.model, revision=revision, config=cfg, attn_implementation="sdpa")
         except Exception:
             model = AutoModelForSequenceClassification.from_pretrained(a.model, revision=revision, config=cfg)
         collator = DataCollatorWithPadding(tok, padding=True)
-        metric_fn = apc_trainer_metrics
-        best_metric = "macro_f1"
+        metric_fn = lambda prediction: apc_trainer_metrics(prediction, va_meta)
+        best_metric = "gold_macro_f1"
         c = Counter(it["labels"] for it in tr)
         tot = max(sum(c.values()), 1)
         cw = torch.tensor([min(4.0, (tot / (len(APC_L2I) * max(c[i], 1))) ** 0.45)

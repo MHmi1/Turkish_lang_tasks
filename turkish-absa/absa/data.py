@@ -22,7 +22,11 @@ from bisect import bisect_right
 from collections import Counter
 from pathlib import Path
 
-from .config import ABSA_TR_FILES, ABSA_TR_REPO, APC_L2I, ATE_L2I, CACHE, M_ABSA_DOMAINS, M_ABSA_REPO, POL_MAP, IMPLICIT_CANDIDATES
+from .config import ABSA_TR_FILES, ABSA_TR_REPO, APC_L2I, ATE_L2I, CACHE, M_ABSA_DOMAINS, M_ABSA_REPO, POL_MAP
+from .text import tr_lower
+
+
+ALIGNMENT_STATS = Counter()
 
 
 def fetch(repo, filename):
@@ -45,21 +49,23 @@ def write_jsonl(path, rows):
 
 
 def text_hash(text):
-    return hashlib.md5(re.sub(r"\s+", " ", text.lower()).strip().encode()).hexdigest()
+    return hashlib.md5(re.sub(r"\s+", " ", tr_lower(text)).strip().encode()).hexdigest()
 
 
 def bucket(key, salt="absa"):
     return int(hashlib.md5((salt + key).encode()).hexdigest()[:8], 16) % 1000
 
 
-def locate_spans(text, aspects):
-    """Resolve character (start, end) for each explicit aspect span without overlapping identical matches."""
+def locate_spans(text, aspects, diagnostics=None):
+    """Resolve offsets; reject a document if any explicit annotation cannot align."""
     used = []
     out = []
     for a in aspects:
         pol = POL_MAP.get(str(a.get("polarity", "")).lower().strip())
         if not pol:
-            continue
+            if diagnostics is not None:
+                diagnostics.append({"reason": "unsupported_polarity", "polarity": a.get("polarity")})
+            return []
         surf = a.get("span")
         asp_name = (a.get("aspect") or surf or "genel").strip()
         s, e = a.get("start"), a.get("end")
@@ -86,10 +92,9 @@ def locate_spans(text, aspects):
             used.append(found)
             out.append({"span": surf, "start": found[0], "end": found[1], "aspect": asp_name, "polarity": pol})
         else:
-            # CRITICAL: a failed explicit alignment MUST NOT become an implicit label.
-            # A synthetic/translated annotation can contain a surface not found in text.
-            # Exclude it rather than inventing a new implicit aspect.
-            continue
+            if diagnostics is not None:
+                diagnostics.append({"span": surf, "aspect": asp_name})
+            return []
     return out
 
 
@@ -100,7 +105,11 @@ def parse_absa_tr(split):
         text = r.get("text", "").strip()
         if not text:
             continue
-        asps = locate_spans(text, r.get("aspects", []))
+        ALIGNMENT_STATS[f"absa_tr_{split}_attempted_docs"] += 1
+        issues = []
+        asps = locate_spans(text, r.get("aspects", []), diagnostics=issues)
+        if issues:
+            ALIGNMENT_STATS[f"absa_tr_{split}_unaligned_docs"] += 1
         if not asps:
             continue
         flags = list(r.get("flags") or [])
@@ -132,15 +141,20 @@ def parse_m_absa(split):
                     continue
                 text, raw = line.strip().split("####", 1)
                 text = text.lstrip("\u200e\u200f").strip()
+                ALIGNMENT_STATS[f"m_absa_{dom}_{split}_attempted_docs"] += 1
                 try:
                     triplets = ast.literal_eval(raw)
                 except Exception:
+                    ALIGNMENT_STATS[f"m_absa_{dom}_{split}_malformed_docs"] += 1
+                    continue
+                if not isinstance(triplets, list) or any(
+                        not isinstance(item, (list, tuple)) or len(item) < 3
+                        for item in triplets):
+                    ALIGNMENT_STATS[f"m_absa_{dom}_{split}_malformed_docs"] += 1
                     continue
                 raw_asps = []
                 seen = set()
                 for item in triplets:
-                    if not isinstance(item, (list, tuple)) or len(item) < 3:
-                        continue
                     sp, cat, pol = item[0], item[1], item[2]
                     key = (sp, pol)
                     if key in seen:
@@ -149,7 +163,10 @@ def parse_m_absa(split):
                     raw_asps.append({"span": None if sp in ("NULL", "null", "") else sp,
                                      "aspect": str(cat).split("#")[0].lower(),
                                      "polarity": pol})
-                asps = locate_spans(text, raw_asps)
+                issues = []
+                asps = locate_spans(text, raw_asps, diagnostics=issues)
+                if issues:
+                    ALIGNMENT_STATS[f"m_absa_{dom}_{split}_unaligned_docs"] += 1
                 if not asps:
                     continue
                 docs.append({
@@ -218,6 +235,7 @@ def parse_clothing(split):
 
 
 def load_public(with_clothing=True):
+    ALIGNMENT_STATS.clear()
     tr = parse_absa_tr("train") + parse_m_absa("train")
     va = parse_absa_tr("val") + parse_m_absa("val")
     te_absatr = parse_absa_tr("test")
@@ -247,8 +265,13 @@ def load_public(with_clothing=True):
                               for a in d["aspects"] if a["span"] is None),
         "sources": dict(Counter(d["source"] for d in clean_tr)),
         "dataset_caveat": "ABSA-TR uses LLM annotations; M-ABSA Turkish is translated/human reviewed; neither is guaranteed native-ecommerce gold.",
+        "alignment_counts": dict(ALIGNMENT_STATS),
     }
     stats["clothing_apc_test"] = len(clothes_test)
+    stats["alignment_drop_rates"] = {
+        key.removesuffix("_unaligned_docs"): count /
+        max(1, ALIGNMENT_STATS[key.removesuffix("_unaligned_docs") + "_attempted_docs"])
+        for key, count in ALIGNMENT_STATS.items() if key.endswith("_unaligned_docs")}
     return {"train": clean_tr, "val": va, "absa_tr_test": te_absatr,
             "m_absa_test": te_mabsa, "clothing_apc_test": clothes_test}, stats
 
@@ -285,9 +308,13 @@ def _align_ate(text, spans, offsets):
 
 def encode_ate(tok, docs, max_len=256):
     # only docs that have at least one explicit span or are genuine review sentences
-    enc = tok([d["text"] for d in docs], truncation=True, max_length=max_len, return_offsets_mapping=True)
+    enc = tok([d["text"] for d in docs], truncation=True, max_length=max_len,
+              stride=max(1, min(64, max_len // 4)), return_overflowing_tokens=True,
+              return_offsets_mapping=True)
     items = []
-    for d, ids, offs in zip(docs, enc["input_ids"], enc["offset_mapping"]):
+    owners = enc.get("overflow_to_sample_mapping", range(len(docs)))
+    for owner, ids, offs in zip(owners, enc["input_ids"], enc["offset_mapping"]):
+        d = docs[int(owner)]
         sp = [(a["start"], a["end"]) for a in d["aspects"] if isinstance(a.get("start"), int) and isinstance(a.get("end"), int)]
         items.append({"input_ids": ids, "labels": _align_ate(d["text"], sp, offs)})
     return items
@@ -296,8 +323,22 @@ def encode_ate(tok, docs, max_len=256):
 # --------------------------------------------------------- tokenization for APC
 def canonical_aspect(name):
     from .config import ASPECT_ALIASES
-    k = re.sub(r"\s+", " ", str(name or "").casefold().replace("\u0307", "")).strip()
+    k = re.sub(r"\s+", " ", tr_lower(name)).strip()
     return ASPECT_ALIASES.get(k, k)
+
+
+def build_implicit_ontology(docs, min_count=2, max_per_domain=40):
+    """Fit the candidate vocabulary on training annotations only, per domain."""
+    counts = {}
+    for d in docs:
+        domain = str(d.get("domain") or "general")
+        tally = counts.setdefault(domain, Counter())
+        for a in d["aspects"]:
+            if a.get("polarity") in APC_L2I:
+                tally[canonical_aspect(a.get("aspect") or a.get("span"))] += 1
+    return {domain: [name for name, count in tally.most_common(max_per_domain)
+                     if name and count >= min_count]
+            for domain, tally in counts.items()}
 
 
 # Conservative weak-supervision guard. Exclude negatives whenever an aspect can
@@ -319,15 +360,22 @@ NEGATIVE_CUE_STEMS = {
 }
 
 
-def safe_negative_candidates(text, positive):
+def _has_cue(text, cue):
+    words = [re.escape(part) for part in cue.split()]
+    pattern = r"(?<!\w)" + r"\s+".join(words) + (r"\w*(?!\w)" if len(cue) >= 4 else r"(?!\w)")
+    return re.search(pattern, text, flags=re.UNICODE) is not None
+
+
+def safe_negative_candidates(text, positive, candidates):
     normalized = {canonical_aspect(p) for p in positive}
-    lower = str(text).casefold().replace("\u0307", "")
-    return [c for c in IMPLICIT_CANDIDATES
+    lower = tr_lower(text)
+    return [c for c in candidates
             if c not in normalized and c != "ürün"
-            and not any(term in lower for term in NEGATIVE_CUE_STEMS.get(c,[c]))]
+            and not _has_cue(lower, c)
+            and not any(_has_cue(lower, term) for term in NEGATIVE_CUE_STEMS.get(c, []))]
 
 
-def apc_views(doc, include_surface=False):
+def apc_views(doc, policy="category"):
     """Yield unambiguous (target, polarity, aspect) views for a text-only APC pair.
 
     A sentence may express opposite opinions about the same category or repeat
@@ -344,53 +392,59 @@ def apc_views(doc, include_surface=False):
         target = canonical_aspect(a.get("aspect") or a.get("span") or "ürün")
         candidates = [target]
         surf = a.get("span")
-        if include_surface and surf and surf.casefold().strip() != target and target not in ("", "genel"):
+        if policy == "surface" and surf:
+            candidates = [str(surf).strip()]
+        elif policy == "both" and surf and tr_lower(surf).strip() != target and target not in ("", "genel"):
             candidates.append(str(surf).strip())
         for view in dict.fromkeys(candidates):
-            key = view.casefold()
+            key = tr_lower(view)
             by_target.setdefault(key, set()).add(pol)
             views.append((view, pol, a))
     seen = set()
     for view, pol, a in views:
-        key = view.casefold()
+        key = tr_lower(view)
         if len(by_target[key]) != 1 or key in seen:
             continue
         seen.add(key)
         yield view, pol, a
 
 
-def encode_apc(tok, docs, max_len=256, train=False, negative_per_doc=2, seed=42, add_negatives=False):
+def encode_apc(tok, docs, max_len=256, train=False, negative_per_doc=2, seed=42,
+               add_negatives=False, ontology=None, view_policy=None):
     """4-way APC with hard absent-aspect negatives (NEUTRAL != NOT_MENTIONED).
     Use normalized categories as well as explicit surface forms as positive views.
     Negative aspect candidates are sampled only from a closed list absent from
     both the annotated category set and the text surface, as a weak safeguard.
     """
-    from .config import IMPLICIT_CANDIDATES
     import random
     rng = random.Random(seed)
     texts, pairs, labels, meta = [], [], [], []
     for d in docs:
         present = {canonical_aspect(a.get("aspect") or a.get("span") or "ürün")
                    for a in d["aspects"] if a.get("polarity") in APC_L2I}
-        for view, pol, a in apc_views(d, include_surface=train):
+        for view, pol, a in apc_views(d, policy=view_policy or ("both" if train else "surface")):
             texts.append(d["text"]); pairs.append(view); labels.append(APC_L2I[pol])
-            meta.append({"id": d["id"], "flags": d.get("flags", []),
+            meta.append({"pair_id": len(meta), "id": d["id"], "flags": d.get("flags", []),
                          "register": d.get("register", "standard"),
                          "implicit": a.get("span") is None and d.get("span_supervision", True), "target": view})
-        if (train or add_negatives) and negative_per_doc:
+        if (train or add_negatives) and negative_per_doc and d.get("span_supervision", True):
             # The closed ontology includes general categories. Avoid 'ürün' as an
             # absent negative when an annotated aspect belongs to that product.
-            candidates = safe_negative_candidates(d["text"],present)
+            candidates = safe_negative_candidates(d["text"], present,
+                                                  (ontology or {}).get(str(d.get("domain") or "general"), []))
             rng.shuffle(candidates)
             for neg in candidates[:negative_per_doc]:
                 texts.append(d["text"]); pairs.append(neg)
                 labels.append(APC_L2I["not_mentioned"])
-                meta.append({"id": d["id"], "flags": d.get("flags", []),
+                meta.append({"pair_id": len(meta), "id": d["id"], "flags": d.get("flags", []),
                              "register": d.get("register", "standard"),
                              "implicit": False, "target": neg, "negative_sample": True})
     if not texts:
         return [], []
-    enc = tok(texts, pairs, truncation=True, max_length=max_len)
+    enc = tok(texts, pairs, truncation="only_first", max_length=max_len,
+              stride=max(1, min(64, max_len // 4)), return_overflowing_tokens=True)
+    owners = enc.get("overflow_to_sample_mapping", range(len(texts)))
     items = [{"input_ids": ids, "attention_mask": mask, "labels": lab}
-             for ids, mask, lab in zip(enc["input_ids"], enc["attention_mask"], labels)]
-    return items, meta
+             for ids, mask, lab in zip(enc["input_ids"], enc["attention_mask"],
+                                       [labels[int(i)] for i in owners])]
+    return items, [meta[int(i)] for i in owners]

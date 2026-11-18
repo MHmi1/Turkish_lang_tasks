@@ -29,12 +29,6 @@ def public_runner_source():
     for name in names:
         node = next(n for n in tree.body if isinstance(n, ast.FunctionDef) and n.name == name)
         segment = ast.get_source_segment(source, node)
-        if name == "stage_train":
-            segment, changes = re.subn(r"    if a\.include_synthetic:\n.*?(?=    full_rows =)",
-                                       "", segment, count=1, flags=re.S)
-            if changes != 1:
-                raise RuntimeError("Training source changed; review the public-only runner extraction")
-            segment = segment.replace("synthetic edge cases", "optional extra rows")
         functions.append(segment)
     prelude = '''"""Public-data-only Colab runner, generated from run_all.py."""
 import json
@@ -44,6 +38,7 @@ import shutil
 import subprocess
 import sys
 import time
+from collections import Counter
 
 from absa import config as C
 from absa.data import load_public, read_jsonl, write_jsonl
@@ -51,6 +46,25 @@ from absa.data import load_public, read_jsonl, write_jsonl
 S = C.SPLITS
 '''
     return prelude + "\n\n" + "\n\n".join(functions) + "\n"
+
+
+def public_config_source():
+    """Exclude CLI-only generation settings without editing the shared config."""
+    source = (ROOT / "absa/config.py").read_text(encoding="utf-8")
+    lines = source.splitlines(keepends=True)
+    omitted = set()
+    for node in ast.parse(source).body:
+        if isinstance(node, ast.Assign) and any(
+                isinstance(target, ast.Name) and target.id in {"GEMINI_MODEL", "GEMINI_MODEL_POOL"}
+                for target in node.targets):
+            omitted.update(range(node.lineno, node.end_lineno + 1))
+    result = "".join(line for number, line in enumerate(lines, 1)
+                     if number not in omitted and not line.startswith("# Candidate models for the optional synthetic"))
+    result = result.replace('SYNTH = DATA / "synth"\n', '')
+    result = result.replace('for _p in (SPLITS, SYNTH, CACHE,', 'for _p in (SPLITS, CACHE,')
+    if "SYNTH" in result or "GEMINI" in result:
+        raise RuntimeError("Public notebook config still contains generation settings")
+    return result
 
 
 md("""# Turkish ABSA: public-data Colab experiment
@@ -62,6 +76,8 @@ This notebook trains a two-stage Turkish aspect-based sentiment analysis system:
 **Data:** [ABSA-TR](https://huggingface.co/datasets/ytu-ce-cosmos/absa-tr) supplies Turkish span and polarity labels; [M-ABSA](https://huggingface.co/datasets/Multilingual-NLP/M-ABSA) supplies Turkish data across seven domains; [Clothing Products ABSA](https://huggingface.co/datasets/ebrukilic/clothing_products_ABSA) supplies category-level polarity without spans. The model starts from [ModernBERT-TR](https://huggingface.co/ytu-ce-cosmos/modernbert-tr-base). Published [ATE](https://huggingface.co/ytu-ce-cosmos/modernbert-tr-absa-extraction) and [APC](https://huggingface.co/ytu-ce-cosmos/modernbert-tr-absa-polarity) checkpoints are optional comparison baselines.
 
 ABSA-TR annotations include model-generated labels; M-ABSA is translated and reviewed; clothing labels have a different supervision level. Scores are therefore reported **per source**. The training split is cleaned, while validation and test annotations stay untouched. No generated reviews are used in this notebook.
+
+The public YTU ATE/APC checkpoints are relevant recent baselines, but their training mixtures and preprocessing differ from this experiment. Their published scores are not directly comparable with a new run here. The notebook validates checkpoint label maps and reports only same-code, same-split comparisons.
 
 Dataset selection was checked against newer resources: [DimABSA 2026](https://aclanthology.org/2026.acl-long.1881.pdf) does not include Turkish and uses dimensional sentiment labels. The [201k-row Turkish ABSA upload](https://huggingface.co/datasets/STNM-NLPhoenix/turkish-absa) exposes a single training split and entity-level labels without character offsets in its public viewer. It is left out of this fixed, span-evaluated benchmark pending a separate annotation and split audit.
 """)
@@ -99,12 +115,12 @@ md("""## 2. Project source
 These cells write the exact source used by the experiment. The Colab runner is derived from the repository runner and contains only public-data stages. Source files remain editable inside the runtime.
 """)
 files = [
-    "requirements.txt", "absa/__init__.py", "absa/config.py", "absa/data.py",
+    "requirements.txt", "absa/__init__.py", "absa/config.py", "absa/text.py", "absa/data.py",
     "absa/quality.py", "absa/metrics.py", "absa/train.py", "absa/infer.py",
     "scripts/audit_data.py", "scripts/eda_data.py", "serve.py",
 ]
 for rel in files:
-    src = (ROOT / rel).read_text(encoding="utf-8")
+    src = public_config_source() if rel == "absa/config.py" else (ROOT / rel).read_text(encoding="utf-8")
     code("%%writefile /content/turkish_absa_colab/" + rel + "\n" + src.rstrip("\n") + "\n")
 code("%%writefile /content/turkish_absa_colab/run_public.py\n" + public_runner_source())
 
@@ -161,7 +177,7 @@ print(json.dumps(manifest, ensure_ascii=False, indent=2))
 
 md("""## 5. Audit, conservative cleaning, and exploratory analysis
 
-The audit checks span offsets, conflicting labels, and split overlap. Cleaning affects **training only**: it removes invalid spans, non-linguistic placeholders, normalized duplicates, and normalized text collisions with held-out data. Regex diagnostics flag URLs, email, phone-like strings, markup and HTML entities, zero-width characters, repeated punctuation, elongated words, low letter ratios, and suspiciously long or short reviews. Flagged text stays in the data unless a separate, explicit rejection rule applies; changing review characters would break gold offsets.
+The audit checks span offsets, conflicting labels, and split overlap. Cleaning affects **training only**: it removes invalid spans, non-linguistic placeholders, normalized duplicates, normalized text collisions and conservative character five-gram near-duplicates against held-out data. The near-duplicate search is approximate. Documents with any unaligned explicit aspect are excluded as a whole, with counts recorded in the manifest. Regex diagnostics flag URLs, email, phone-like strings, markup and HTML entities, zero-width characters, repeated punctuation, elongated words, low letter ratios, and suspiciously long or short reviews. Flagged text stays in the data unless a separate, explicit rejection rule applies; changing review characters would break gold offsets.
 
 EDA reports source/domain balance, polarity, aspect frequency, explicit versus implicit supervision, multi-aspect reviews, length quantiles, duplicate counts, ambiguous category polarity, and ModernBERT truncation risk. Inspect these reports before training.
 """)
@@ -212,7 +228,7 @@ plt.show()
 
 md("""## 6. Train ATE and APC
 
-ATE learns BIO tags from span-supervised documents. APC learns sentiment for a `(review, aspect)` pair with a distinct `not_mentioned` class; this prevents treating an absent aspect as neutral. Ambiguous same-target polarity views are excluded from APC training. Models are trained sequentially on one GPU or in parallel when two GPUs are available. Validation controls checkpoint selection; test splits are reserved for final evaluation.
+ATE learns BIO tags from span-supervised documents. APC learns sentiment for a `(review, aspect)` pair with a distinct `not_mentioned` class; this prevents treating an absent aspect as neutral. Ambiguous same-target polarity views are excluded from APC training. The candidate ontology is learned from cleaned training data by domain. Long reviews use overlapping token windows. APC checkpoint selection uses validation macro F1 on gold pairs under the same target policy as final testing; heuristic absent-aspect negatives remain in validation but are reported separately. Models are trained sequentially on one GPU or in parallel when two GPUs are available. Test splits are reserved for final evaluation.
 """)
 code("""if not torch.cuda.is_available():
     raise RuntimeError('Select a GPU runtime before training.')
@@ -254,7 +270,7 @@ del apc
 
 md("""## 8. Final held-out evaluation
 
-Report ATE exact and overlap F1, APC macro F1 on gold aspects, and end-to-end explicit tuple F1 separately. The implicit score uses a sampled subset and a closed candidate ontology, so include the sample size. The clothing test has no ATE/E2E score. Do not combine scores from annotation protocols into one unexplained number.
+Report ATE exact and overlap F1, APC macro F1 on gold aspects, and end-to-end explicit tuple F1 separately. The implicit score uses a uniform document sample and a training-derived domain ontology, so include sample size, positive prevalence, and gold ontology coverage. The clothing test has no ATE/E2E score. Do not combine scores from annotation protocols into one unexplained number.
 """)
 code("""run_stage('eval')
 results = json.loads((reports / 'results.json').read_text())
@@ -281,6 +297,7 @@ from zipfile import ZipFile, ZIP_DEFLATED
 bundle = WORK / 'turkish_absa_report_bundle.zip'
 include = ['data/splits/manifest.json', 'reports/environment.txt',
            'reports/upstream_revisions.json', 'reports/data_audit.json',
+           'reports/review_queue.jsonl',
            'reports/cleaning_report.json', 'reports/eda_report.json',
            'reports/eda_overview.png', 'reports/apc_validation_errors.csv',
            'reports/results.json', 'reports/results.md', 'reports/demo.md',
@@ -296,7 +313,7 @@ print('Report bundle:', bundle)
 
 md("""## Reporting guidance
 
-State the exact data counts and cleaning exclusions, held-out scores per dataset, GPU and package versions, seed, and known annotation limitations. The architecture is a strong reproducible baseline; improvement claims require repeated seeds or a controlled ablation and independent review of difficult Turkish expressions. Do not present a quick run or validation-selected score as a final test result.
+State the exact data counts, alignment and cleaning exclusions, held-out scores per dataset, GPU and package versions, seed, and known annotation limitations. The ATE threshold remains fixed and uncalibrated. Improvement claims require repeated seeds, paired uncertainty estimates, a controlled ablation, and independent review of difficult Turkish expressions. Do not present a quick run or validation-selected score as a final test result.
 """)
 
 for i, cell in enumerate(CELLS):

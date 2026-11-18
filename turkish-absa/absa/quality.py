@@ -7,6 +7,7 @@ import html
 import re
 import unicodedata
 from collections import Counter, defaultdict
+from .text import tr_lower
 
 
 URL = re.compile(r"(?i)\b(?:https?://|www\.)\S+")
@@ -23,7 +24,7 @@ PLACEHOLDERS = {"nan", "none", "null", "n/a", "na", "-", "...", "?"}
 def canonical_text(text):
     """Normalize only for duplicate detection, never for model input or span offsets."""
     s = html.unescape(unicodedata.normalize("NFKC", str(text or "")))
-    s = ZERO_WIDTH.sub("", s).casefold().replace("\u0307", "")
+    s = tr_lower(ZERO_WIDTH.sub("", s))
     return re.sub(r"\s+", " ", s).strip()
 
 
@@ -111,3 +112,49 @@ def clean_training(train, heldout):
         "example_ids_by_reason": dict(example_ids),
     }
     return accepted, report
+
+
+def filter_near_heldout(train, heldout, threshold=0.9, min_chars=40):
+    """Remove high-overlap train reviews using rare-shingle retrieval and exact Jaccard.
+
+    This is a conservative candidate search, not a guarantee of semantic deduplication.
+    Held-out documents are never changed.
+    """
+    def shingles(text):
+        normalized = re.sub(r"[^\w\s]", "", canonical_text(text))
+        return {normalized[i:i + 5] for i in range(len(normalized) - 4)}
+
+    held_rows = [doc for split in heldout.values() for doc in split
+                 if len(canonical_text(doc.get("text"))) >= min_chars]
+    held_sets = [shingles(doc["text"]) for doc in held_rows]
+    index = defaultdict(list)
+    for i, grams in enumerate(held_sets):
+        for gram in grams:
+            index[gram].append(i)
+    kept, matches = [], []
+    for doc in train:
+        normalized = canonical_text(doc.get("text"))
+        if len(normalized) < min_chars:
+            kept.append(doc)
+            continue
+        grams = shingles(normalized)
+        candidates = set()
+        for gram in sorted((g for g in grams if g in index), key=lambda g: len(index[g]))[:16]:
+            candidates.update(index.get(gram, ()))
+        best = None
+        for i in candidates:
+            other = held_sets[i]
+            if min(len(grams), len(other)) / max(len(grams), len(other)) < threshold:
+                continue
+            intersection = len(grams & other)
+            similarity = intersection / (len(grams) + len(other) - intersection)
+            if similarity >= threshold and (best is None or similarity > best[1]):
+                best = (held_rows[i].get("id"), similarity)
+        if best is None:
+            kept.append(doc)
+        else:
+            matches.append({"train_id": doc.get("id"), "heldout_id": best[0],
+                            "char_5gram_jaccard": round(best[1], 4)})
+    return kept, {"threshold": threshold, "min_chars": min_chars,
+                  "candidate_search": "16 rarest held-out character five-grams",
+                  "removed": len(matches), "examples": matches[:50]}

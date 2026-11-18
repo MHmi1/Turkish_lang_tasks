@@ -8,6 +8,7 @@ import shutil
 import subprocess
 import sys
 import time
+from collections import Counter
 
 from absa import config as C
 from absa.data import bucket, load_public, read_jsonl, text_hash, write_jsonl
@@ -50,13 +51,23 @@ def stage_prepare(a):
 
 
 def stage_clean(a):
-    from absa.quality import clean_training
+    from absa.quality import clean_training, filter_near_heldout
+    from absa.data import build_implicit_ontology
     train = read_jsonl(S / "train_public.jsonl")
     held = {name: read_jsonl(S / f"{name}.jsonl") for name in
             ("val", "absa_tr_test", "m_absa_test", "clothing_apc_test")
             if (S / f"{name}.jsonl").exists()}
     cleaned, report = clean_training(train, held)
+    cleaned, near_report = filter_near_heldout(cleaned, held)
+    report["near_heldout"] = near_report
+    report["counts"]["accepted"] = len(cleaned)
+    report["counts"]["dropped"] = len(train) - len(cleaned)
+    report["dropped_by_reason"]["near_heldout_overlap"] = near_report["removed"]
+    report["source_after"] = dict(Counter(d.get("source", "unknown") for d in cleaned))
     write_jsonl(S / "train_clean.jsonl", cleaned)
+    ontology = build_implicit_ontology(cleaned)
+    (S / "implicit_ontology.json").write_text(
+        json.dumps(ontology, ensure_ascii=False, indent=2), encoding="utf-8")
     (C.REPORTS / "cleaning_report.json").write_text(
         json.dumps(report, ensure_ascii=False, indent=2), encoding="utf-8")
     print("[clean]", json.dumps(report["counts"], ensure_ascii=False), flush=True)
@@ -132,25 +143,36 @@ def stage_synth(a):
 
 
 # --------------------------------------------------------------------- train
+def prepare_synthetic_training_file(a):
+    """Opt-in augmentation path for CLI experiments; not part of the public notebook."""
+    pub = read_jsonl(S / "train_clean.jsonl")
+    extra = []
+    for src in ("local", "gemini"):
+        f = C.SYNTH / f"{src}_train.jsonl"
+        if f.exists():
+            extra += read_jsonl(f)
+    if not extra:
+        raise ValueError("No synthetic training file found; run --stage synth first")
+    max_synth = int(len(pub) * a.max_synth_ratio / max(1e-6, 1-a.max_synth_ratio))
+    random.Random(a.seed).shuffle(extra)
+    extra = extra[:max_synth]
+    public_hashes = {text_hash(d["text"]) for d in pub}
+    held_hashes = {text_hash(d["text"]) for f in
+                   [S/"val.jsonl", S/"absa_tr_test.jsonl", S/"m_absa_test.jsonl"]
+                   if f.exists() for d in read_jsonl(f)}
+    extra = [d for d in extra if text_hash(d["text"]) not in public_hashes | held_hashes]
+    full_rows = pub + extra
+    path = S / "train_with_synthetic.jsonl"
+    write_jsonl(path, full_rows)
+    return path
+
+
 def stage_train(a):
     import torch
 
     pub = read_jsonl(S / "train_clean.jsonl")
-    extra = []
-    if a.include_synthetic:
-        for src in ("local", "gemini"):
-            f = C.SYNTH / f"{src}_train.jsonl"
-            if f.exists():
-                extra += read_jsonl(f)
-        max_synth = int(len(pub) * a.max_synth_ratio / max(1e-6, 1-a.max_synth_ratio))
-        random.Random(a.seed).shuffle(extra)
-        extra = extra[:max_synth]
-        public_hashes = {text_hash(d["text"]) for d in pub}
-        held_hashes = {text_hash(d["text"]) for f in
-                       [S/"val.jsonl", S/"absa_tr_test.jsonl", S/"m_absa_test.jsonl"]
-                       if f.exists() for d in read_jsonl(f)}
-        extra = [d for d in extra if text_hash(d["text"]) not in public_hashes | held_hashes]
-    full_rows = pub + extra
+    override = getattr(a, "train_override", None)
+    full_rows = read_jsonl(override) if override else pub
     random.Random(a.seed).shuffle(full_rows)
     train_path = S / "train_full.jsonl"
     write_jsonl(train_path, full_rows)
@@ -160,7 +182,7 @@ def stage_train(a):
     val_path = S / "val_full.jsonl"
     write_jsonl(val_path, val_rows)
 
-    print(f"[train] full dataset: {len(pub)} public + {len(extra)} synthetic edge cases (val={len(val_rows)})", flush=True)
+    print(f"[train] {len(full_rows)} training rows ({len(pub)} public); val={len(val_rows)}", flush=True)
 
     jobs = []
     variants = [("full", train_path)]
@@ -186,6 +208,8 @@ def stage_train(a):
                 "--max_len", str(a.max_len),
                 "--grad_accum", str(a.grad_accum),
             ]
+            if task == "apc":
+                cmd += ["--ontology", str(S / "implicit_ontology.json")]
             if a.quick:
                 cmd += ["--max_train", "200"]
             jobs.append((name, cmd))
@@ -219,27 +243,13 @@ def stage_train(a):
 
 # ---------------------------------------------------------------------- eval
 def _gold_apc_pairs(docs):
+    from absa.data import apc_views
     texts, targets, labels, meta = [], [], [], []
     for d in docs:
-        rows = []
-        for a in d["aspects"]:
-            pol = C.APC_L2I.get(a["polarity"])
-            if pol is None:
-                continue
-            target = (a.get("span") or a.get("aspect") or "ürün").strip()
-            rows.append((target, pol, a))
-        label_sets = {}
-        for target, pol, _ in rows:
-            label_sets.setdefault(target.casefold(), set()).add(pol)
-        seen = set()
-        for target, pol, a in rows:
-            key = target.casefold()
-            if len(label_sets[key]) != 1 or key in seen:
-                continue
-            seen.add(key)
+        for target, pol_name, a in apc_views(d, policy="surface"):
             texts.append(d["text"])
             targets.append(target)
-            labels.append(pol)
+            labels.append(C.APC_L2I[pol_name])
             meta.append({
                 "id": d["id"],
                 "flags": d.get("flags", []),
@@ -251,6 +261,7 @@ def _gold_apc_pairs(docs):
 
 def stage_eval(a):
     from absa.infer import APCPredictor, ATEPredictor
+    from absa.data import canonical_aspect
     from absa.metrics import eval_apc, eval_ate, eval_e2e
 
     tests = {}
@@ -291,40 +302,45 @@ def stage_eval(a):
             apc_m = eval_apc(y_true, y_pred, meta=meta)
 
             # 3. End-to-End (extracted span + predicted polarity)
-            e2e_tuples = []
-            for d, sp in zip(span_docs, raw_spans):
-                if not sp:
-                    e2e_tuples.append([])
-                    continue
-                t_list = [d["text"]] * len(sp)
-                a_list = [s["span"] for s in sp]
-                p_list, _, _ = apc.classify_pairs(t_list, a_list)
-                e2e_tuples.append([(s["start"], s["end"], apc.label_names[p])
-                                   for s, p in zip(sp, p_list) if apc.label_names[p] != "not_mentioned"])
+            flat_texts, flat_targets, owners = [], [], []
+            for doc_idx, (d, spans) in enumerate(zip(span_docs, raw_spans)):
+                for span in spans:
+                    flat_texts.append(d["text"])
+                    flat_targets.append(span["span"])
+                    owners.append((doc_idx, span))
+            flat_preds, _, _ = apc.classify_pairs(flat_texts, flat_targets)
+            e2e_tuples = [[] for _ in span_docs]
+            for (doc_idx, span), pred in zip(owners, flat_preds):
+                label = apc.label_names[pred]
+                if label != "not_mentioned":
+                    e2e_tuples[doc_idx].append((span["start"], span["end"], label))
             e2e_m = eval_e2e(span_docs, e2e_tuples) if span_docs else None
 
             entry = {"ate": ate_m, "apc": apc_m, "apc_ambiguous_or_duplicate_skipped": apc_skipped,
                      "e2e": e2e_m}
-            if a.eval_implicit_limit and apc.model.config.num_labels == 4 and span_docs:
+            if a.eval_implicit_limit and apc.absent_idx is not None and span_docs:
                 from absa.metrics import eval_implicit
                 from absa.infer import ABSAPipeline
                 # Reuse loaded predictors (do not load a third copy on GPU).
                 obj = ABSAPipeline.__new__(ABSAPipeline)
                 obj.ate, obj.apc, obj.tau = ate, apc, 0.45
                 obj.implicit_confidence, obj.absent_margin = 0.78, 0.12
-                pos = [d for d in span_docs if any(a.get('span') is None for a in d['aspects'])]
-                neg = [d for d in span_docs if not any(a.get('span') is None for a in d['aspects'])]
-                random.Random(a.seed).shuffle(pos)
-                random.Random(a.seed).shuffle(neg)
-                half = a.eval_implicit_limit // 2
-                subset = pos[:half] + neg[:a.eval_implicit_limit - min(half,len(pos))]
-                # If a dataset has few implicit instances, backfill from negatives.
-                if len(subset) < a.eval_implicit_limit:
-                    already = {d['id'] for d in subset}
-                    subset += [d for d in neg if d['id'] not in already][:a.eval_implicit_limit-len(subset)]
-                pred = [obj.analyze(d["text"], include_implicit_fallback=True)["aspects"]
+                obj.ontology = json.loads((S / "implicit_ontology.json").read_text(encoding="utf-8"))
+                subset = random.Random(a.seed).sample(span_docs, min(a.eval_implicit_limit, len(span_docs)))
+                pred = [obj.analyze(d["text"], domain=d.get("domain"), include_implicit_fallback=True)["aspects"]
                         for d in subset]
                 entry["implicit"] = eval_implicit(subset, pred)
+                entry["implicit"]["sampling"] = "uniform_document_sample"
+                entry["implicit"]["positive_documents"] = sum(
+                    any(asp.get("span") is None for asp in d["aspects"]) for d in subset)
+                covered = sum(
+                    1 for d in subset for asp in d["aspects"]
+                    if asp.get("span") is None and
+                    canonical_aspect(asp.get("aspect"))
+                    in obj.ontology.get(str(d.get("domain") or "general"), []))
+                entry["implicit"]["ontology_gold_covered"] = covered
+                support = entry["implicit"]["support"]
+                entry["implicit"]["ontology_gold_coverage"] = covered / support if support else None
             report[sys_name][tname] = entry
         del ate, apc
         import gc, torch
@@ -361,7 +377,17 @@ def format_markdown(report):
                       f"{m['apc']['accuracy']:.3f} | **{m['apc']['macro_f1']:.3f}** | N/A | ")
             implicit = m.get("implicit")
             L[-1] += f"{implicit['f1']:.3f} |" if implicit else "N/A |"
-    L.append("\n## 2. Challenging Linguistic Slices (APC Macro-F1 on Sarcasm / Idiom / Gen-Z / Negation / Implicit)\n")
+    L.append("\n## 2. Implicit probe diagnostics\n")
+    L.append("| System | Test | Sampled documents | Documents with implicit gold | Gold tuples | Ontology coverage | Implicit F1 |")
+    L.append("|---|---|---:|---:|---:|---:|---:|")
+    for system, tests_by_name in report.items():
+        for test_name, result in tests_by_name.items():
+            imp = result.get("implicit")
+            if imp:
+                coverage = f"{imp['ontology_gold_coverage']:.3f}" if imp['ontology_gold_coverage'] is not None else "N/A"
+                L.append(f"| {system} | {test_name} | {imp['n_docs']} | {imp['positive_documents']} | "
+                         f"{imp['support']} | {coverage} | {imp['f1']:.3f} |")
+    L.append("\n## 3. Challenging Linguistic Slices (APC Macro-F1 on Sarcasm / Idiom / Gen-Z / Negation / Implicit)\n")
     for tn in tests:
         has_slices = any(report[s].get(tn, {}).get("apc", {}).get("slices") for s in report)
         if not has_slices:
@@ -397,6 +423,7 @@ def stage_export(a):
         if d.exists():
             shutil.rmtree(d)
         shutil.copytree(s, d)
+    shutil.copy2(S / "implicit_ontology.json", dst_apc / "implicit_ontology.json")
 
     pipe = ABSAPipeline(str(dst_ate), str(dst_apc), device="cpu")
     lines = ["# Inference examples from the public held-out ABSA-TR test split (CPU)\n"]
@@ -404,7 +431,7 @@ def stage_export(a):
     sample = random.Random(a.seed).sample(test_docs, min(6, len(test_docs)))
     for doc in sample:
         text = doc["text"]
-        r = pipe.analyze(text)
+        r = pipe.analyze(text, domain=doc.get("domain"))
         lines.append(f"**Source ID:** `{doc['id']}`  \n**Review:** `{text}`\n")
         for asp in r["aspects"]:
             tag = "IMPLICIT" if asp["implicit"] else f"SPAN[{asp['start']}:{asp['end']}]"
@@ -451,6 +478,8 @@ def main():
     for s in steps:
         t0 = time.time()
         print(f"\n===== {s} =====", flush=True)
+        if s == "train" and a.include_synthetic:
+            a.train_override = prepare_synthetic_training_file(a)
         globals()[f"stage_{s}"](a)
         print(f"===== {s} done in {time.time() - t0:.0f}s =====", flush=True)
 

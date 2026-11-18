@@ -56,7 +56,9 @@ class OfflineTests(unittest.TestCase):
     def test_apc_four_class_and_absent_examples(self):
         doc={'id':'x','text':'Kargo çok hızlı, ürün güzel.','flags':[],
              'aspects':[{'span':'Kargo','aspect':'kargo','polarity':'positive','start':0,'end':5}]}
-        items,meta=encode_apc(FakeTokenizer(),[doc],train=True,negative_per_doc=3)
+        doc['domain'] = 'ecommerce'
+        items,meta=encode_apc(FakeTokenizer(),[doc],train=True,negative_per_doc=3,
+                              ontology={'ecommerce': ['teslimat', 'fiyat', 'kalite']})
         labels=[x['labels'] for x in items]
         self.assertIn(3,labels)
         self.assertIn(2,labels)
